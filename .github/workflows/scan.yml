@@ -1,23 +1,35 @@
-- name: Synopsys Intelligent Security Scan
-  # You may pin to the exact commit or the version.
-  # uses: synopsys-sig/intelligent-security-scan@80672d7aaafdedd481e94902dfa26520e1fd967b
-  uses: synopsys-sig/intelligent-security-scan@2022.12.0
-  with:
-    # The server Host URL for Intelligent Scan Engine eg http://localhost:1111 or https://21b7.ngrok.io
-    ioServerUrl: # default is http://localhost:9090
-    # The server password for Intelligent Scan Engine
-    ioServerToken: # optional, default is 
-    # HTTP URL to download IO Manifest file synopsys-io.yml
-    ioManifestUrl: # optional
-    # The server Host URL for Intelligent Scan Workflow Engine eg http://localhost:1111 or https://21b7.ngrok.io
-    workflowServerUrl: # default is http://localhost:9091
-    # The workflow jar version to retrieve for Intelligent Scan Engine
-    workflowVersion: # optional, default is 2022.12.0
-    # The run ID from IO stage job
-    runId: # optional, default is 
-    # Additional arguments required for workflow engine arguments
-    additionalWorkflowArgs: 
-    # Additional arguments required for workflow engine arguments
-    stage: # default is IO
-    # Type of Manifest file for IO
-    manifestType: # optional, default is yml
+# Coverity thin client with CNC scan farm on a GitHub-hosted ephemeral runner
+name: cnc-thin-client
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  coverity:
+    runs-on: ubuntu-latest
+
+    env:
+      COV_URL: ${{ secrets.COV_URL }}
+      COV_USER: ${{ secrets.COV_USER }}
+      COVERITY_PASSPHRASE: ${{ secrets.COVERITY_PASSPHRASE }}
+      COV_STREAM: hello-java-main
+      BLDCMD: mvn -B compile
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-java@v1
+      with:
+        java-version: 11
+
+    - name: Coverity Download
+      run: |
+        PLATFORM=linux64
+        VERSION=2022.3.0
+        curl -fLsS $COV_URL/api/v2/scans/downloads/cov_thin_client-$PLATFORM-$VERSION.tar.gz | tar -C $RUNNER_TEMP -xzf -
+    - name: Coverity Full Scan
+      if: ${{ github.event_name != 'pull_request' }}
+      run: |
+        export COVERITY_CLI_CLOUD_ANALYSIS_ASYNC=false
+        $RUNNER_TEMP/bin/coverity scan -o analyze.location=connect -o commit.connect.url=$COV_URL -o commit.connect.stream=$COV_STREAM -- $BLDCMD
