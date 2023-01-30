@@ -26,7 +26,7 @@ jobs:
     - name: Coverity Download
       run: |
         PLATFORM=linux64
-        VERSION=2022.3.0
+        VERSION=2022.12.0
         curl -fLsS $COV_URL/api/v2/scans/downloads/cov_thin_client-$PLATFORM-$VERSION.tar.gz | tar -C $RUNNER_TEMP -xzf -
     - name: Coverity Full Scan
       if: ${{ github.event_name != 'pull_request' }}
